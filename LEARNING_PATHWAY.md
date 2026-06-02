@@ -3,8 +3,6 @@
 A record of what I studied during my research-assistant traineeship, from
 deep-learning fundamentals through to generative models for medical imaging.
 
-> Dates below are approximate phases — adjust to your actual timeline.
-
 ---
 
 ## Overview
@@ -21,7 +19,7 @@ reused as the denoising backbone inside *diffusion* models.
 
 ---
 
-## Phase 1 — Fundamentals (~Month 1)
+## Phase 1 — Fundamentals
 
 - Set up TensorFlow and PyTorch, learned the difference between the two
   frameworks (eager vs graph, data pipelines, tensor conventions).
@@ -30,7 +28,7 @@ reused as the denoising backbone inside *diffusion* models.
   *data loading* and *tensor layout* conventions differ (e.g. channels-first in
   PyTorch `(C, H, W)` vs channels-last in Keras `(H, W, C)`).
 
-## Phase 2 — U-Net for medical image segmentation (~Months 2–3)
+## Phase 2 — U-Net for medical image segmentation
 
 Folder: [`UNet-Study/`](UNet-Study/)
 
@@ -48,7 +46,7 @@ Folder: [`UNet-Study/`](UNet-Study/)
 > `pretrained-unet-lung-segmentation`) are currently **empty stubs** and need to be
 > re-exported from Kaggle — see their `.md` notes.
 
-## Phase 3 — Generative models for medical imaging (~Month 4, current)
+## Phase 3 — Generative models for medical imaging (current)
 
 Folder: [`Stable-Diffusion/`](Stable-Diffusion/)
 
