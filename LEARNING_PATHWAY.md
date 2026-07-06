@@ -60,6 +60,20 @@ Folder: [`Stable-Diffusion/`](Stable-Diffusion/)
 - **Key realization:** the diffusion "U-Net" is the same architecture from Phase 2,
   now predicting *noise* instead of a *segmentation mask*.
 
+## Phase 4 — Adversarial robustness for diffusion training (current)
+
+Folders: [`GradCAM-Attack/`](GradCAM-Attack/) → [`SD-Noise-Gate/`](SD-Noise-Gate/)
+
+- Learned how **FGSM/PGD adversarial attacks** fool a classifier with imperceptible
+  noise, and used **Grad-CAM** to visualize how the attack shifts the model's attention.
+- Built a **tiled, batched, gradient-free noise detector**: cut each image into a grid
+  of tiles, score every tile's high-frequency energy in one GPU pass, flag tiles above
+  a threshold calibrated on trusted clean tiles. Forward-only batching is the idea
+  borrowed from **ViT-ReciproCAM** ([arXiv:2310.02588](https://arxiv.org/abs/2310.02588)).
+- Now deploying it as a **pre-training gate for Stable Diffusion**: screen every incoming
+  training image and quarantine poisoned ones *before* `VAE.encode`, so the diffusion
+  model never learns from tampered data.
+
 ---
 
 ## What I'd explore next
