@@ -26,9 +26,20 @@ threshold calibrated once on trusted-clean data, and **quarantines poisoned imag
      lesson (forward-only scoring batches trivially, no gradients needed) is why the scan is cheap
      enough to run on every training image.
 
-  Flow: SD generates a small demo training set → PGD poisons a subset inside irregular blobs →
-  the gate scans all images in one batch across both T4s → per-image figures + a
-  precision/recall/IoU scorecard → kept images proceed into the VAE/scheduler training step.
+  Flow: pick an image source → PGD poisons a subset inside irregular blobs → the gate scans all
+  images in one batch across both T4s → per-image figures + a precision/recall/IoU scorecard →
+  kept images proceed into the VAE/scheduler training step.
+
+  **Choosing the images (Cell 4, `IMAGE_SOURCE`):**
+  - `"folder"` — **your own real images.** Add a dataset via **+ Add Input** in the Kaggle
+    sidebar (or upload files), then set `IMAGE_DIR` to the folder. Use this to see results on
+    real photos. Needs ≥ 8 images (4 calibrate the detector, 4+ get tested).
+  - `"generate"` — generate the set with Stable Diffusion.
+  - `"web"` — download a few sample photos (no dataset or SD weights required).
+
+  The adversarial poison is always injected by the notebook itself — that is deliberate: to
+  *measure* detection you must know which images are tampered, so the ground truth has to be
+  created here. Your own images just change the base pictures the attack is applied to.
 
 - `sd_training_noise_gate.ipynb` — an **earlier draft** kept for history. Same idea, but poisons
   ImageNet photos rather than SD-generated images and scans image-by-image instead of one batched
