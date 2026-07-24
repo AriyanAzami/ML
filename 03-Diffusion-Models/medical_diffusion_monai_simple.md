@@ -48,7 +48,7 @@ from monai.networks.schedulers import DDPMScheduler   # adds/removes noise
 
 | Concept | Where I first met it |
 |---------|---------------------|
-| U-Net encoder–decoder | [`../UNet-Study`](../UNet-Study/) (segmentation) |
+| U-Net encoder–decoder | [`../02-UNet-Segmentation`](../02-UNet-Segmentation/) (segmentation) |
 | Diffusion / scheduler / latent space | [`stable_diffusion_intro.md`](stable_diffusion_intro.md) |
 | Medical data handling (transforms, datasets) | MONAI (this notebook) |
 

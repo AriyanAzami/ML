@@ -1,8 +1,8 @@
-# SD-Attack-Repair — can a cheap frequency detector find *where* an attack hit?
+# 07-Attack-Repair — can a cheap frequency detector find *where* an attack hit?
 
 **Measured answer: it finds broadband attacks, misses low-frequency ones, and the obvious fix
-doesn't work.** This folder tests the prediction made in [`../Attack-Benchmark/`](../Attack-Benchmark/)
-about the tile gate in [`../SD-Noise-Gate/`](../SD-Noise-Gate/), and reports a **negative result**.
+doesn't work.** This folder tests the prediction made in [`../06-Attack-Benchmark/`](../06-Attack-Benchmark/)
+about the tile gate in [`../05-Noise-Gate/`](../05-Noise-Gate/), and reports a **negative result**.
 
 | detector | k | HF-attack IoU | LF-attack IoU | clean FP |
 |---|---|---|---|---|
@@ -21,7 +21,7 @@ about the tile gate in [`../SD-Noise-Gate/`](../SD-Noise-Gate/), and reports a *
    signal**, so no threshold on hand-designed band energy separates them.
 
 This is the evidence for the **learned per-tile classifier** that the
-[`../SD-Noise-Gate/`](../SD-Noise-Gate/) research log already lists as the next step — it turns a
+[`../05-Noise-Gate/`](../05-Noise-Gate/) research log already lists as the next step — it turns a
 hunch into a measured claim. A promising untested route is a **VAE reconstruction residual**:
 encode→decode projects onto SD's learned natural-image manifold, so off-manifold perturbations
 shouldn't survive the round trip — a learned prior instead of a hand-picked band.
@@ -81,6 +81,6 @@ Three mistakes made in this folder, each of which produced a confidently wrong c
 
 ## References
 
-- Attack zoo and the original prediction — [`../Attack-Benchmark/README.md`](../Attack-Benchmark/README.md).
+- Attack zoo and the original prediction — [`../06-Attack-Benchmark/README.md`](../06-Attack-Benchmark/README.md).
 - ViT-ReciproCAM ([arXiv:2310.02588](https://arxiv.org/abs/2310.02588)) — the gradient-free,
   forward-only scoring idea behind the cheap scan.

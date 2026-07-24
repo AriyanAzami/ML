@@ -8,9 +8,10 @@ deep-learning fundamentals through to generative models for medical imaging.
 ## Overview
 
 ```
-Phase 1            Phase 2                 Phase 3
-Fundamentals  →    U-Net segmentation  →   Diffusion / generative
-(TF + PyTorch)     (ISIC, lungs)           (Stable Diffusion → MONAI)
+Phase 1            Phase 2                 Phase 3                     Phase 4
+Fundamentals  →    U-Net segmentation  →   Diffusion / generative  →   Adversarial robustness
+(TF + PyTorch)     (ISIC, lungs)           (Stable Diffusion →         (attack → detect → gate
+                                            MONAI)                      → benchmark → repair)
 ```
 
 The thread connecting everything: the **U-Net** architecture. I first learned it
@@ -23,14 +24,14 @@ reused as the denoising backbone inside *diffusion* models.
 
 - Set up TensorFlow and PyTorch, learned the difference between the two
   frameworks (eager vs graph, data pipelines, tensor conventions).
-- Worked through `Assignment-1/assignment.ipynb`.
+- Worked through `01-Fundamentals/assignment.ipynb`.
 - **Key takeaway:** the same model can be expressed in either framework, but the
   *data loading* and *tensor layout* conventions differ (e.g. channels-first in
   PyTorch `(C, H, W)` vs channels-last in Keras `(H, W, C)`).
 
 ## Phase 2 — U-Net for medical image segmentation
 
-Folder: [`UNet-Study/`](UNet-Study/)
+Folder: [`02-UNet-Segmentation/`](02-UNet-Segmentation/)
 
 - Built a U-Net for **ISIC 2018 skin-lesion segmentation** — full encoder–decoder
   with skip connections, trained with a **Dice loss** and evaluated with **Dice
@@ -40,29 +41,30 @@ Folder: [`UNet-Study/`](UNet-Study/)
   on demand.
 - Experimented with **bridging a PyTorch `DataLoader` into a Keras model** — a
   hands-on lesson in how the two frameworks' data pipelines differ.
-- See: [`UNet-Study/pytorch-unet-kfold.md`](UNet-Study/pytorch-unet-kfold.md)
+- See: [`02-UNet-Segmentation/pytorch-unet-kfold.md`](02-UNet-Segmentation/pytorch-unet-kfold.md)
 
 > ⚠️ Two notebooks in this phase (`tensorflow-unet-kfold`,
 > `pretrained-unet-lung-segmentation`) are currently **empty stubs** and need to be
 > re-exported from Kaggle — see their `.md` notes.
 
-## Phase 3 — Generative models for medical imaging (current)
+## Phase 3 — Generative models for medical imaging
 
-Folder: [`Stable-Diffusion/`](Stable-Diffusion/)
+Folder: [`03-Diffusion-Models/`](03-Diffusion-Models/)
 
 - Studied **Stable Diffusion** via the Hugging Face `diffusers` walkthrough:
   latent diffusion, the VAE / U-Net / text-encoder / scheduler components.
-  See: [`Stable-Diffusion/stable_diffusion_intro.md`](Stable-Diffusion/stable_diffusion_intro.md)
+  See: [`03-Diffusion-Models/stable_diffusion_intro.md`](03-Diffusion-Models/stable_diffusion_intro.md)
 - Applied the same ideas to **medical images** using **MONAI** (the standard
   medical-imaging DL framework). Built a minimal diffusion model that learns to
   *generate* synthetic HeadCT scans from noise.
-  See: [`Stable-Diffusion/medical_diffusion_monai_simple.md`](Stable-Diffusion/medical_diffusion_monai_simple.md)
+  See: [`03-Diffusion-Models/medical_diffusion_monai_simple.md`](03-Diffusion-Models/medical_diffusion_monai_simple.md)
 - **Key realization:** the diffusion "U-Net" is the same architecture from Phase 2,
   now predicting *noise* instead of a *segmentation mask*.
 
 ## Phase 4 — Adversarial robustness for diffusion training (current)
 
-Folders: [`GradCAM-Attack/`](GradCAM-Attack/) → [`SD-Noise-Gate/`](SD-Noise-Gate/)
+Folders: [`04-Adversarial-Attacks/`](04-Adversarial-Attacks/) → [`05-Noise-Gate/`](05-Noise-Gate/)
+→ [`06-Attack-Benchmark/`](06-Attack-Benchmark/) → [`07-Attack-Repair/`](07-Attack-Repair/)
 
 - Learned how **FGSM/PGD adversarial attacks** fool a classifier with imperceptible
   noise, and used **Grad-CAM** to visualize how the attack shifts the model's attention.
@@ -70,9 +72,20 @@ Folders: [`GradCAM-Attack/`](GradCAM-Attack/) → [`SD-Noise-Gate/`](SD-Noise-Ga
   of tiles, score every tile's high-frequency energy in one GPU pass, flag tiles above
   a threshold calibrated on trusted clean tiles. Forward-only batching is the idea
   borrowed from **ViT-ReciproCAM** ([arXiv:2310.02588](https://arxiv.org/abs/2310.02588)).
-- Now deploying it as a **pre-training gate for Stable Diffusion**: screen every incoming
+- Deployed it as a **pre-training gate for Stable Diffusion**: screen every incoming
   training image and quarantine poisoned ones *before* `VAE.encode`, so the diffusion
   model never learns from tampered data.
+- Stress-tested the gate against a wider **attack zoo** (C&W, DeepFool, FAB, Square, and a
+  low-frequency/Nightshade-style poison) instead of just FGSM/PGD, and predicted that a
+  high-frequency energy score would be *structurally blind* to attacks hiding in low
+  spatial frequencies.
+- Tested that prediction and got a **negative result**, recorded rather than buried: a bank of
+  octave band-pass filters does see the low-frequency poison (LF IoU 0.05 → 0.24), but only at
+  a threshold that pushes clean-image false positives to 47%. Tightening the threshold collapses
+  IoU on both attack types. So the mask is not reliable enough to drive SD inpainting repair.
+- **Key takeaway:** detection as a *gate* ("is this image poisoned?") and *localization*
+  ("which pixels?") are different difficulties. Cheap frequency statistics are enough for the
+  first and — on this evidence — not enough for the second.
 
 ---
 

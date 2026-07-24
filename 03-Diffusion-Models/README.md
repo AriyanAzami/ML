@@ -1,6 +1,8 @@
-# Stable Diffusion
+# 03-Diffusion-Models — Stable Diffusion internals and medical diffusion
 
-Notes from learning diffusion models, working up from natural images to medical imaging.
+Learning diffusion models, working up from natural images to medical imaging. The U-Net from
+[`../02-UNet-Segmentation/`](../02-UNet-Segmentation/) reappears here as the denoising backbone;
+the pipeline studied here is what [`../05-Noise-Gate/`](../05-Noise-Gate/) later defends.
 
 | Notebook | What it covers |
 |----------|----------------|

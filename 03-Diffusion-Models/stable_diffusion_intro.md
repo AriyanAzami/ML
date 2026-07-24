@@ -55,7 +55,7 @@ latents = scheduler.step(noise_pred, t, latents).prev_sample
 ## How this connects to the rest of my work
 
 - The **U-Net here is the same architecture** I used for segmentation in
-  [`../UNet-Study`](../UNet-Study/) — but it predicts *noise* instead of a *mask*.
+  [`../02-UNet-Segmentation`](../02-UNet-Segmentation/) — but it predicts *noise* instead of a *mask*.
 - The **text encoder is the part medical imaging usually drops** — for CT/MRI you
   typically don't have prompts, you just learn the image distribution. That's
   exactly what the MONAI notebook does next:

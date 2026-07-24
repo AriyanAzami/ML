@@ -1,7 +1,8 @@
-# U-Net Study
+# 02-UNet-Segmentation — U-Net for medical image segmentation
 
-Notebooks from learning the U-Net architecture for medical image segmentation,
-across both PyTorch and TensorFlow. (Originally the "TEMP Kaggle notebooks".)
+Learning the U-Net encoder–decoder architecture across both PyTorch and TensorFlow.
+The same architecture returns in [`../03-Diffusion-Models/`](../03-Diffusion-Models/) as the
+denoising backbone of a diffusion model — predicting *noise* instead of a *mask*.
 
 | Notebook | Framework | Task |
 |----------|-----------|------|
@@ -10,4 +11,4 @@ across both PyTorch and TensorFlow. (Originally the "TEMP Kaggle notebooks".)
 | `pretrained-unet-lung-segmentation.ipynb` | PyTorch | Lung segmentation using a pretrained U-Net encoder. |
 
 U-Net's encoder–decoder with skip connections is also the backbone of the diffusion
-models in `../Stable-Diffusion`, so this study feeds directly into that work.
+models in `../03-Diffusion-Models`, so this study feeds directly into that work.

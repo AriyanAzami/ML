@@ -1,7 +1,7 @@
-# Attack-Benchmark — stress-testing the tile noise detector against an attack zoo
+# 06-Attack-Benchmark — stress-testing the tile noise detector against an attack zoo
 
-So far the detector in [`../GradCAM-Attack/`](../GradCAM-Attack/) and
-[`../SD-Noise-Gate/`](../SD-Noise-Gate/) has only been tested against **FGSM** and **PGD** — both
+So far the detector in [`../04-Adversarial-Attacks/`](../04-Adversarial-Attacks/) and
+[`../05-Noise-Gate/`](../05-Noise-Gate/) has only been tested against **FGSM** and **PGD** — both
 L∞, gradient-based attacks that inject **broadband high-frequency noise**, which is exactly what
 the `median + k·MAD` high-frequency-energy detector is built to catch. This folder tests it against
 **harder and different attacks** on random images, and measures *where it starts to fail*.

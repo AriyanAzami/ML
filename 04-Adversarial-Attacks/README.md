@@ -1,4 +1,4 @@
-# GradCAM-Attack — adversarial attacks, localization, and tiled detection
+# 04-Adversarial-Attacks — adversarial attacks, localization, and tiled detection
 
 Progression of notebooks, each building on the previous one:
 
@@ -15,7 +15,7 @@ Progression of notebooks, each building on the previous one:
    (`median + k·MAD`). Grades itself with tile-level precision / recall / IoU against the
    true attacked region.
 
-Key conventions (shared by all notebooks and by `../SD-Noise-Gate/`):
+Key conventions (shared by all notebooks and by `../05-Noise-Gate/`):
 
 - Images are `[1,3,SIZE,SIZE]` float tensors in **[0,1] pixel space**; model-specific
   normalization happens inside the model call, so noise budgets are measured in real pixels.

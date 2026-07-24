@@ -1,7 +1,7 @@
-# SD-Noise-Gate — a tiled noise-attack detector as a module in the Stable Diffusion workflow
+# 05-Noise-Gate — a tiled noise-attack detector as a module in the Stable Diffusion workflow
 
 This folder takes the **tiled FGSM/PGD noise detection** built in
-[`../GradCAM-Attack/tiled_noise_attack_detection.ipynb`](../GradCAM-Attack/tiled_noise_attack_detection.ipynb)
+[`../04-Adversarial-Attacks/tiled_noise_attack_detection.ipynb`](../04-Adversarial-Attacks/tiled_noise_attack_detection.ipynb)
 and installs it as a **screening module in front of the Stable Diffusion training path**:
 
 ```
@@ -30,7 +30,7 @@ threshold calibrated once on trusted-clean data, and **quarantines poisoned imag
   batched scan. It joins three things:
   1. the **Stable Diffusion workflow** from [`../Resources/stable_diffusion.ipynb`](../Resources/stable_diffusion.ipynb)
      (generation + `VAE.encode → scheduler.add_noise` training path),
-  2. the **tiled noise-attack detection** I practiced in `../GradCAM-Attack/`, and
+  2. the **tiled noise-attack detection** I practiced in `../04-Adversarial-Attacks/`, and
   3. **ViT-ReciproCAM** ([arXiv:2310.02588](https://arxiv.org/abs/2310.02588)) — the paper whose
      lesson (forward-only scoring batches trivially, no gradients needed) is why the scan is cheap
      enough to run on every training image.

@@ -11,4 +11,4 @@
 - [`stable_diffusion.ipynb`](stable_diffusion.ipynb) — the Hugging Face `diffusers`
   Stable Diffusion walkthrough (pipeline usage + a hand-written inference loop exposing the
   VAE, CLIP text encoder, UNet, and scheduler). Source of the SD components that
-  `../SD-Noise-Gate/` protects.
+  `../05-Noise-Gate/` protects.

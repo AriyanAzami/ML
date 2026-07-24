@@ -1,10 +1,10 @@
-# SD-Noise-Gate
+# 05-Noise-Gate
 
 A **pre-training noise/poison detection gate** for Stable Diffusion training data.
 
 ## What this folder is
 
-The user is learning ML and studying Stable Diffusion. In `../GradCAM-Attack/` they built a
+The user is learning ML and studying Stable Diffusion. In `../04-Adversarial-Attacks/` they built a
 tiled, batched, gradient-free **adversarial-noise detector**: cut an image into a grid of tiles,
 score each tile's high-frequency energy, and flag the tiles that carry injected noise (FGSM/PGD).
 
@@ -16,9 +16,9 @@ perturbations), the model learns from corrupted data. The gate inspects every in
 
 ## The three inputs it stitches together
 
-1. **`../GradCAM-Attack/tiled_noise_attack_detection.ipynb`** — source of `tile_image`, the
+1. **`../04-Adversarial-Attacks/tiled_noise_attack_detection.ipynb`** — source of `tile_image`, the
    per-tile high-frequency-energy detector, and the FGSM/PGD attack used to make poisoned samples.
-2. **The HuggingFace Stable Diffusion intro notebook** (`../Stable-Diffusion/`) — the training /
+2. **The HuggingFace Stable Diffusion intro notebook** (`../03-Diffusion-Models/`) — the training /
    inference pipeline (VAE, scheduler `add_noise`, UNet) that the gate protects.
 3. **ViT-ReciproCAM, arXiv:2310.02588** — motivates a **gradient-free, batchable** saliency /
    inspection step: no per-image backprop means a whole batch of images (or tiles) clears in one
