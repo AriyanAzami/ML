@@ -49,23 +49,23 @@ poison, but not at any threshold that keeps clean images usable — so the resul
 good enough to drive Stable Diffusion inpainting. Detection as a **gate** (is this image
 poisoned?) still works; **localization** (which pixels?) does not, yet.
 
-`08-AutoAttack-Localize/` took that diagnosis at its word and proposed a contrast-invariant
-spectral-*shape* statistic, validated on synthetic images. **It then ran on real photographs and
-scored at chance.** Three things came out of taking that failure apart:
+`08-AutoAttack-Localize/` is a record of **two wrong predictions corrected by measurement**. It
+proposed a contrast-invariant spectral-*shape* statistic, validated on synthetic images — which
+scored at chance on real photographs. It then diagnosed that as a ground-truth error worth ~0.13
+AUC — which measured **0.000**. What survives is smaller than either claim and is measured:
 
-1. **The ground truth was wrong, and it cost the most.** Scores were computed against the region
-   *drawn* for the attack — but AutoAttack spends its budget where the classifier is sensitive, so
-   only ~40% of that region carried any perturbation. Scoring against the pixels actually perturbed
-   moves the same detector on the same images from 0.84 to **0.97** AUC.
-2. **The synthetic prototype had removed the very confound it was meant to survive** — 1/f images
-   are spatially stationary; real photographs are not. A validation set missing your confound will
-   confirm anything.
-3. **The feature that works is cross-channel decorrelation.** Attacks perturb R, G and B
-   independently; natural fine detail is luminance-correlated. It is the only feature that catches
-   Square Attack, which is piecewise-constant and so invisible to every high-pass residual.
+1. **Cross-channel decorrelation** is the one genuinely new feature. Attacks perturb R, G and B
+   independently while natural fine detail is luminance-dominated, so the chroma part of the fine
+   residual is nearly pure attack. It is the only feature that catches **Square Attack** (0.70 vs
+   0.45 for SRM), which is piecewise-constant and so invisible to any high-pass residual — and the
+   only feature whose attack shift exceeds its between-image spread, i.e. the only one a single
+   global threshold could ever work for.
+2. **Real gain over `07`: 6× on L∞ and 11× on Square, at a third of the false-positive budget**
+   (IoU 0.14 / 0.26 at 5% FP, against 0.05–0.16 at 15%). Worthwhile, and nowhere near good enough
+   to drive an inpainter.
+3. **Lesson that outlasts the code:** a synthetic validation set lacking the confound you are
+   trying to defeat will confirm anything — and a single summary statistic is not a measurement.
 
-The shipped detector is `mean(SRM, chroma)` with **no fitting at all** — the fitted fusion beat
-none of the features it was built from. The low-frequency poison remains the only attack in the zoo
-with no detector above chance.
+The low-frequency poison remains the only attack in the zoo with no detector above chance.
 
 Notebooks are written for **Kaggle (GPU T4 ×2, Internet on)**.

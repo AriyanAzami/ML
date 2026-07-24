@@ -5,69 +5,80 @@ detector could not localize an attack (IoU 0.05–0.16 at ~15% false positives).
 that — but **not** by the route its own first version predicted, and the gap between the two is the
 most useful thing in here.
 
-## v1 predicted the wrong fix, and running it said so
+## Two wrong predictions, both corrected by measurement
 
-v1 was designed on synthetic 1/f images. It argued that `07` failed because energy is not
-contrast-invariant, and that a **spectral slope** statistic (`e2/e1`, in which contrast cancels)
-would fix it. On synthetic images that looked decisive: pooled AUC 0.55 → 0.95.
+**v1** was designed on synthetic 1/f images and predicted a contrast-invariant **spectral slope**
+statistic would solve localization (synthetic AUC 0.55 → 0.95). On real photographs it scored
+**0.55 — chance**.
 
-On real photographs from this dataset it scored **AUC 0.55 — chance** — and the whole zoo landed at
-IoU ≤ 0.15. Taking that apart produced the three findings below.
+**v2** diagnosed that as a ground-truth error: v1 scored against the region *drawn* for the attack,
+and its RMS table (0.0201 in-region against 0.0314 saturated) suggested only ~40% of the region
+carried perturbation. Predicted worth of the fix: ~0.13 AUC. **Measured worth: 0.000.** Support is
+**99%** of the region, and SRM scores **0.696 either way**. APGD's δ is *graded in amplitude*, not
+*absent* — a distinction a single RMS number cannot resolve.
 
-### 1. The ground truth was wrong, and it cost the most
+Both errors came from reasoning about data instead of measuring it: a synthetic proxy in v1, a
+summary statistic in v2. The self-checking output added in v2 is what caught v2's own mistake — the
+cell written to demonstrate the ground-truth gap printed both numbers and showed there wasn't one.
 
-Every score was computed against the **region drawn** for the attack. But AutoAttack spends its
-budget where the classifier is sensitive, not uniformly. The run's own table shows APGD-CE with an
-in-region RMS of **0.0201** against **0.0314** for a saturated perturbation — so only ~40% of the
-region carried any perturbation at all. The detector was being charged for not flagging pixels that
-contain no signal.
+### What the prototype lesson actually is
 
-Scoring against the **effective support** (`|δ| > ε/4`) instead, on the same images and the same
-attack, moves SRM from **0.84 to 0.97**. v2 reports both, and prints the gap so the size of the
-error stays visible.
+1/f images are spatially **stationary**; one median and MAD describe the whole image. Real
+photographs are not — sky and foliage within one frame differ more than two photographs do. The
+prototype had removed the exact confound the statistic was built to survive. **A synthetic
+validation set that lacks the confound you are trying to defeat will confirm anything.**
 
-### 2. The synthetic prototype removed the exact confound it was meant to survive
+## What survives: measured on this dataset
 
-1/f noise images are spatially **stationary** — one median and MAD describe the whole image. Real
-photographs are not: sky and foliage within one frame differ more than two photographs do. On top
-of that, the fine scale of a compressed, resized photo is already noise-like (clean slope 0.65–1.75
-against 3.0 for white noise), so there is little headroom for added noise to move it.
+Per-pixel AUC against the perturbation support, pooled over 5 images:
 
-**A synthetic validation set that lacks the confound you are trying to defeat will confirm
-anything.** That is the transferable lesson, and it is the same class of mistake `07` documents.
-
-### 3. What actually works: cross-channel decorrelation
-
-Every attack here perturbs R, G and B **independently**, while natural fine detail is
-luminance-dominated and strongly channel-correlated. So the chroma component of the fine residual
-is nearly pure attack. Measured on real dataset images:
-
-| feature | L∞ (APGD/PGD) | Square | smooth L2 | low-freq |
+| feature | APGD-CE / APGD-T / masked-PGD | Square | smooth L2 | low-freq |
 |---|---|---|---|---|
-| energy (`07`'s gate) | ~0.51 | 0.43 | 0.41 | 0.46 |
-| slope (v1's headline) | 0.83 | 0.51 | 0.45 | 0.48 |
-| **SRM** | **0.97** | 0.51 | 0.49 | 0.49 |
-| **chroma decorrelation** | **0.96** | **0.83** | **0.90** | 0.47 |
+| energy (`07`'s gate, 2-sided) | 0.39–0.40 | 0.41 | 0.44 | 0.45 |
+| `07` gate as actually run (1-sided) | 0.60 | 0.59 | 0.51 | 0.50 |
+| slope (v1's headline) | 0.55 | 0.56 | 0.44 | 0.45 |
+| **SRM** | **0.69–0.70** | 0.45 | 0.45 | 0.45 |
+| **chroma decorrelation** | 0.65–0.66 | **0.70** | **0.52** | 0.41 |
 
-Chroma is the only feature that catches the attacks that are **not white noise**. Square Attack is
-piecewise-*constant* over patches and adds no high-frequency residual at all, which is why every
-residual-based feature scores it at chance.
+IoU at a 5% clean false-positive rate — the metric `07` reported, where it scored 0.05–0.16 **at
+15%**:
 
-The recommended detector is **`mean(SRM, chroma)` with no fitting whatsoever**: AUC ~0.97 and
-IoU 0.35–0.62 at a 5% clean false-positive rate on the L∞ attacks, against `07`'s 0.05–0.16 at 15%.
+| detector | APGD-CE | Square | smooth L2 | low-freq |
+|---|---|---|---|---|
+| `07` gate | 0.022 | 0.023 | 0.026 | 0.026 |
+| SRM | **0.142** | 0.023 | 0.022 | 0.020 |
+| chroma | 0.122 | **0.261** | **0.126** | 0.007 |
 
-### The learned fusion is kept because it fails
+**6× better than `07` on L∞ and 11× on Square, at a third of the false-positive budget.** Real, and
+far short of solved — nothing here is accurate enough to drive an inpainter.
 
-A leave-one-image-out logistic regression fitted on APGD-CE **beat none of the single features it
-is built from** on any other attack. Five images is thin, but it is a useful corrective to the
-assumption that learning a combination must help — and it is why the shipped detector does no
-fitting at all.
+### Cross-channel decorrelation is the one genuinely new thing
+
+Attacks perturb R, G and B independently; natural fine detail is luminance-dominated. So the chroma
+part of the fine residual is nearly pure attack. Two consequences, both in the output:
+
+- It is the **only feature that catches Square Attack** (0.70 vs 0.45 for SRM). Square is
+  piecewise-*constant* over patches and adds no high-frequency residual at all.
+- It is the **only feature whose attack shift exceeds its between-image spread** (3.25 vs 2.57).
+  Every other feature reads `confound > signal` — no single global threshold can work for it. That
+  is `07`'s original diagnosis, now measured per feature.
+
+**No detector wins everywhere**, so SRM and chroma are reported separately; `mean(SRM, chroma)` is
+middling at both jobs (0.135 / 0.161) rather than better than either.
+
+### Two things that did not work
+
+**The fitted fusion** — a leave-one-image-out logistic regression fitted on APGD-CE — beat the best
+single feature on **1 of 6** scored attacks. Kept in the notebook as a measured negative.
+
+**FAB-T is excluded from scoring**, not because it defeats the detector but because it lands
+`max|δ| = 0.02/255` — roughly 1/400 of the budget, an empty support. Scoring a localizer on an
+image carrying no perturbation is meaningless; that is a fact about minimum-norm attacks.
 
 ## Still unsolved: the low-frequency poison
 
-Nothing here exceeds ~0.49 on it. `06` predicted it, `07` measured it, this folder fails against it
-too — now with better instruments and a clearer idea why: a poison hiding in low frequencies is
-spectrally closest to natural image content. It is now the *only* attack in the zoo with no
+Nothing exceeds 0.48, and chroma is actively *worse* than chance on it (0.41). `06` predicted it,
+`07` measured it, this folder fails against it too. It remains the only attack in the zoo with no
 detector above chance.
 
 The untested route from `07` still stands — a **VAE reconstruction residual**, projecting onto
@@ -101,6 +112,10 @@ raw / attacked-area / detection figure → YOLO transfer damage.
 ### Fixed in v2
 
 - `torchattacks` returns tensors still attached to its graph — this crashed section 9. Now detached.
+- `permute()` leaves a non-contiguous array and `ultralytics` asserts on it (`Image not
+  contiguous`), which killed the YOLO cell on the first successful run. Now `ascontiguousarray`.
+- FAB-T produced an empty support and turned every aggregate into `nan`. Attacks with no
+  perturbation to find are now excluded by measurement, with the reason printed.
 - The invariance table applied `max/min` to a **signed** feature and printed a meaningless `0.03x`.
   It now compares between-image range against the measured attack shift, in the same units.
 - The fooling rate was measured in a **separate forward pass** from the clean prediction, which
