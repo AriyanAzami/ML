@@ -1,71 +1,86 @@
-# SD-Attack-Repair — locate the hardest attack, then let Stable Diffusion fix that part
+# SD-Attack-Repair — can a cheap frequency detector find *where* an attack hit?
 
-This folder closes the loop started in the other two: [`../Attack-Benchmark/`](../Attack-Benchmark/)
-laid out the attack zoo and predicted *where the tile gate fails*, and
-[`../SD-Noise-Gate/`](../SD-Noise-Gate/) is the gate itself (high-frequency energy per tile). Here
-we take the **one attack that gate is blind to**, upgrade the detector just enough to **localize**
-it, and hand the located region to **Stable Diffusion inpainting** to repair it.
+**Measured answer: it finds broadband attacks, misses low-frequency ones, and the obvious fix
+doesn't work.** This folder tests the prediction made in [`../Attack-Benchmark/`](../Attack-Benchmark/)
+about the tile gate in [`../SD-Noise-Gate/`](../SD-Noise-Gate/), and reports a **negative result**.
 
-```
-image --> [ multi-band tile scan ] --clean--> keep
-                 |
-                 +--attacked tiles--> mask --> SD inpaint --> repaired image
-```
+| detector | k | HF-attack IoU | LF-attack IoU | clean FP |
+|---|---|---|---|---|
+| HF only (the gate) | 3 | 0.32 | **0.05** | 16% |
+| multi-band | 3 | 0.36 | **0.24** | **47%** |
+| multi-band | 6 | 0.06 | **0.06** | 12% |
 
-## Why the low-frequency attack is the hardest one *for this detector*
+1. **The benchmark's prediction holds.** The gate localizes a broadband attack (IoU 0.32) and is
+   blind to an equal-energy low-frequency one (**0.05**).
+2. **Widening the HF band into a multi-band bank does not fix it.** It *looks* like a rescue
+   (0.05 → 0.24) but only by flagging **47% of clean tiles**. At a comparable false-positive rate
+   the advantage is gone: **0.06 vs 0.05**. The gain was bought with false positives.
+3. **Why, and why it's structural.** Natural images are non-stationary. Median band energy varies
+   **~6× between clean photos** (0.0048 → 0.0281) and more *within* a photo between sky and
+   foliage. A bounded perturbation lifts local energy ~2.5×. **The confound is bigger than the
+   signal**, so no threshold on hand-designed band energy separates them.
 
-The gate scores each tile by `hf_energy = mean(|tile - blur(tile)|)`. Against the zoo:
+This is the evidence for the **learned per-tile classifier** that the
+[`../SD-Noise-Gate/`](../SD-Noise-Gate/) research log already lists as the next step — it turns a
+hunch into a measured claim. A promising untested route is a **VAE reconstruction residual**:
+encode→decode projects onto SD's learned natural-image manifold, so off-manifold perturbations
+shouldn't survive the round trip — a learned prior instead of a hand-picked band.
 
-- **FGSM / PGD / Square** inject *broadband, high-frequency* noise → loud in that score → easy.
-- **C&W / DeepFool / FAB** are minimal-norm but still leave some high-frequency trace → subtle.
-- **Low-frequency / Nightshade-Glaze** hides its energy in *low* spatial frequencies. `|tile -
-  blur(tile)|` barely moves, so the gate is **structurally blind** — not just under-tuned. That is
-  the hardest case, so it is the one this folder attacks and defends against.
+## What is solid: three verified fixes
 
-The notebook builds this poison by taking PGD and **low-pass filtering the perturbation at every
-step**, forcing the injected energy into the low band while keeping it inside an L∞ `epsilon`
-budget and confined to a random irregular blob.
+These hold regardless of the scoring statistic, and they correct real defects:
 
-## The best method to still find *where* it hit: a multi-band spectral residual
+1. **No tiling.** Blurring is translation-invariant, so blur the *whole* image once and `avg_pool`
+   the residual — the same statistic, without the copy. Tiling first zero-pads every tile,
+   fabricating a black neighbour; on interior tiles that **inflates the σ=8 band by 24×**. This was
+   a real bug in this folder's first version, and it corrupted precisely the low-frequency bands
+   the folder exists to measure.
+2. **Separable convolution.** The Gaussian is an outer product, so a 49×49 2D conv becomes two 1D
+   convs (~25× fewer FLOPs). Verified exact to ~1e-6.
+3. **Native batching.** `[N,3,H,W]` in one pass — no `unfold`, no `ThreadPoolExecutor`, no
+   multi-GPU chunking. Timed live in the notebook (on CPU: ~48 s → ~1 s for 12 images).
 
-Instead of a single high-frequency band, use a small **bank of octave band-pass filters**
-(differences of Gaussian blurs, fine → coarse). Calibrate a robust `median + k·MAD` baseline
-**per band** on trusted-clean tiles, z-score every incoming tile per band, and flag it if **any**
-band exceeds `k`.
+Bonus: because the band maps are computed at full resolution, **the grid is free**. Pool at 4×4 or
+32×32 for the same cost, or use a sliding window for arbitrary shapes.
 
-- The gate's original HF score is exactly **band 0** of this bank — so this is a strict
-  generalization, not a replacement. L∞ attacks still fire band 0; the low-frequency poison now
-  fires a *lower* band.
-- It stays **forward-only and calibration-only** (the ViT-ReciproCAM lesson): no gradients, no new
-  training, negligible extra cost.
+## Arbitrary shapes
 
-The flagged tiles become a mask; `StableDiffusionInpaintPipeline` regenerates only those tiles and
-copies the rest through, so a clean image passes unchanged.
+Dropping tiles makes the score **per-pixel**, so nothing forces a rectangle. A sliding window plus
+morphological open/close recovers any shape — blob, ring, thin scribble — and the notebook shows
+it on all three. **But measured honestly it does not work**: threshold picked on a dev image and
+evaluated held-out gives **IoU 0.05–0.16 at ~15% false positives**. The machinery is sound; the
+statistic underneath is too weak. The failure is shown, not hidden.
 
 ## The notebook
 
-- **[`attack_localize_and_repair.ipynb`](attack_localize_and_repair.ipynb)** — one short,
-  self-contained pass: tiler → HF vs. multi-band detectors → low-frequency poison → **IoU
-  comparison** (HF misses, multi-band localizes) → SD inpaint repair. Kaggle **GPU T4 ×2, Internet
-  On**; falls back to web sample images with no dataset, and the SD step is guarded so it runs even
-  without the diffusers weights (it then just shows the mask it *would* repair).
+**[`attack_localize_and_repair.ipynb`](attack_localize_and_repair.ipynb)** — Kaggle **GPU T4,
+Internet On**; falls back to web sample images, and the SD step is guarded so it runs without the
+weights. Sections: tile-free detector → live sanity checks (separability, speed, the 24× padding
+bug) → attack zoo at equal RMS → **the money figure: IoU vs false positives** → arbitrary-shape
+localization → SD inpaint repair.
+
+Repair is demonstrated on the **ground-truth mask**, deliberately: the measured detector isn't good
+enough to drive an inpainter, and wiring a 15%-FP mask into one would repaint healthy image.
 
 ### Knobs
 
-- `IMAGE_SOURCE` — `"web"` (built-in samples) or `"folder"` (your Kaggle dataset via **+ Add Input**).
-- `EPSILON` — L∞ budget of the low-frequency poison.
-- `K_SENSITIVITY` — per-band threshold `median + k·MAD`; lower = stricter.
-- `_SIGMAS` — the blur scales that define the band bank (fine → coarse).
+- `IMAGE_SOURCE` — `"web"` or `"folder"` (your Kaggle dataset via **+ Add Input**).
+- `RMS` — perturbation energy, held equal across attacks.
+- `SIGMAS` — the blur scales defining the band bank.
 
-## Honest limitation
+## Methodology notes (learned the hard way here)
 
-Natural images carry lots of genuine low-frequency variation, so the coarse bands are noisier than
-the HF band — expect more false positives there. That is the motivation, already noted in the
-[`../SD-Noise-Gate/`](../SD-Noise-Gate/) research log, for a small **learned per-tile classifier**
-as the next step beyond hand-designed frequency bands.
+Three mistakes made in this folder, each of which produced a confidently wrong conclusion:
+
+- **Compare at matched false-positive rate.** A fixed threshold flatters whichever detector flags
+  more. This is what made multi-band look like a fix.
+- **Equalize perturbation RMS across attacks.** The first low-frequency attack was 4× weaker in RMS
+  than the broadband one, so "LF is harder" was partly just "LF was smaller."
+- **Never pick thresholds per-image on the test case.** Oracle thresholds inflated a real IoU of
+  ~0.1 into an apparent 0.47.
 
 ## References
 
-- AutoAttack / attack zoo — see [`../Attack-Benchmark/README.md`](../Attack-Benchmark/README.md).
-- ViT-ReciproCAM ([arXiv:2310.02588](https://arxiv.org/abs/2310.02588)) — gradient-free, batchable
-  scoring behind the cheap forward-only scan.
+- Attack zoo and the original prediction — [`../Attack-Benchmark/README.md`](../Attack-Benchmark/README.md).
+- ViT-ReciproCAM ([arXiv:2310.02588](https://arxiv.org/abs/2310.02588)) — the gradient-free,
+  forward-only scoring idea behind the cheap scan.
