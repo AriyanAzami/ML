@@ -1,6 +1,6 @@
 {
-  "id": "abtinzandi/autoattack-noise-localization",
-  "title": "AutoAttack noise localization",
+  "id": "ariyanazami/autoattack-noise-localization-ipynb",
+  "title": "autoattack-noise-localization-ipynb",
   "code_file": "autoattack_noise_localization.ipynb",
   "language": "python",
   "kernel_type": "notebook",
