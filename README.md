@@ -17,7 +17,8 @@ See [LEARNING_PATHWAY.md](LEARNING_PATHWAY.md) for the full study narrative.
 | [`04-Adversarial-Attacks/`](04-Adversarial-Attacks/) | FGSM/PGD attacks + Grad-CAM localization, ending in the **tiled, batched noise detector** that scores each tile's high-frequency energy. |
 | [`05-Noise-Gate/`](05-Noise-Gate/) | That detector installed as a *gate* in front of the SD training path — screen every image, quarantine poisoned ones before `VAE.encode`. |
 | [`06-Attack-Benchmark/`](06-Attack-Benchmark/) | An attack zoo (C&W, DeepFool, FAB, Square, low-frequency) used to stress-test the gate and predict where it fails. |
-| [`07-Attack-Repair/`](07-Attack-Repair/) | **Current work:** can the gate localize *where* an attack hit, well enough to repair it with SD inpainting? Reports a **negative result** — see below. |
+| [`07-Attack-Repair/`](07-Attack-Repair/) | Can the gate localize *where* an attack hit, well enough to repair it with SD inpainting? Reports a **negative result** — see below. |
+| [`08-AutoAttack-Localize/`](08-AutoAttack-Localize/) | **Current work:** the fix for that negative result — score the *shape* of the local spectrum instead of its energy, so contrast cancels. Tested on real AutoAttack perturbations. |
 | [`Resources/`](Resources/) | Reference material: the ViT-ReciproCAM paper (arXiv:2310.02588) and the Hugging Face Stable Diffusion walkthrough notebook. |
 
 ## The project in one paragraph
@@ -47,5 +48,14 @@ Widening to a bank of octave band-pass filters *does* let the detector see the l
 poison, but not at any threshold that keeps clean images usable — so the resulting mask is not
 good enough to drive Stable Diffusion inpainting. Detection as a **gate** (is this image
 poisoned?) still works; **localization** (which pixels?) does not, yet.
+
+`08-AutoAttack-Localize/` takes that diagnosis at its word. The confound is *contrast*, so the fix
+is a statistic contrast cannot move: the ratio of second- to first-difference energy over a local
+window, which measures the **shape** of the spectrum rather than its scale. Two things fell out of
+measuring it — the score has to be **two-sided** (L∞ noise flattens the local spectrum, smooth L2
+noise steepens it, so a one-sided detector doesn't miss smooth attacks, it ranks them *backwards*),
+and a small learned fusion given five features **independently reconstructs the same ratio**. It is
+evaluated on real `torchattacks` AutoAttack components, leave-one-image-out, with thresholds
+calibrated on clean images only. The low-frequency poison remains the hardest case.
 
 Notebooks are written for **Kaggle (GPU T4 ×2, Internet on)**.
