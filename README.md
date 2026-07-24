@@ -18,7 +18,7 @@ See [LEARNING_PATHWAY.md](LEARNING_PATHWAY.md) for the full study narrative.
 | [`05-Noise-Gate/`](05-Noise-Gate/) | That detector installed as a *gate* in front of the SD training path — screen every image, quarantine poisoned ones before `VAE.encode`. |
 | [`06-Attack-Benchmark/`](06-Attack-Benchmark/) | An attack zoo (C&W, DeepFool, FAB, Square, low-frequency) used to stress-test the gate and predict where it fails. |
 | [`07-Attack-Repair/`](07-Attack-Repair/) | Can the gate localize *where* an attack hit, well enough to repair it with SD inpainting? Reports a **negative result** — see below. |
-| [`08-AutoAttack-Localize/`](08-AutoAttack-Localize/) | **Current work:** the fix for that negative result — score the *shape* of the local spectrum instead of its energy, so contrast cancels. Tested on real AutoAttack perturbations. |
+| [`08-AutoAttack-Localize/`](08-AutoAttack-Localize/) | **Current work:** localizing real AutoAttack perturbations. Beats `07` — but by fixing the ground truth and finding a colour-channel feature, after the predicted fix failed on real photographs. |
 | [`Resources/`](Resources/) | Reference material: the ViT-ReciproCAM paper (arXiv:2310.02588) and the Hugging Face Stable Diffusion walkthrough notebook. |
 
 ## The project in one paragraph
@@ -49,13 +49,23 @@ poison, but not at any threshold that keeps clean images usable — so the resul
 good enough to drive Stable Diffusion inpainting. Detection as a **gate** (is this image
 poisoned?) still works; **localization** (which pixels?) does not, yet.
 
-`08-AutoAttack-Localize/` takes that diagnosis at its word. The confound is *contrast*, so the fix
-is a statistic contrast cannot move: the ratio of second- to first-difference energy over a local
-window, which measures the **shape** of the spectrum rather than its scale. Two things fell out of
-measuring it — the score has to be **two-sided** (L∞ noise flattens the local spectrum, smooth L2
-noise steepens it, so a one-sided detector doesn't miss smooth attacks, it ranks them *backwards*),
-and a small learned fusion given five features **independently reconstructs the same ratio**. It is
-evaluated on real `torchattacks` AutoAttack components, leave-one-image-out, with thresholds
-calibrated on clean images only. The low-frequency poison remains the hardest case.
+`08-AutoAttack-Localize/` took that diagnosis at its word and proposed a contrast-invariant
+spectral-*shape* statistic, validated on synthetic images. **It then ran on real photographs and
+scored at chance.** Three things came out of taking that failure apart:
+
+1. **The ground truth was wrong, and it cost the most.** Scores were computed against the region
+   *drawn* for the attack — but AutoAttack spends its budget where the classifier is sensitive, so
+   only ~40% of that region carried any perturbation. Scoring against the pixels actually perturbed
+   moves the same detector on the same images from 0.84 to **0.97** AUC.
+2. **The synthetic prototype had removed the very confound it was meant to survive** — 1/f images
+   are spatially stationary; real photographs are not. A validation set missing your confound will
+   confirm anything.
+3. **The feature that works is cross-channel decorrelation.** Attacks perturb R, G and B
+   independently; natural fine detail is luminance-correlated. It is the only feature that catches
+   Square Attack, which is piecewise-constant and so invisible to every high-pass residual.
+
+The shipped detector is `mean(SRM, chroma)` with **no fitting at all** — the fitted fusion beat
+none of the features it was built from. The low-frequency poison remains the only attack in the zoo
+with no detector above chance.
 
 Notebooks are written for **Kaggle (GPU T4 ×2, Internet on)**.
