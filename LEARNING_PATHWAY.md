@@ -11,7 +11,8 @@ deep-learning fundamentals through to generative models for medical imaging.
 Phase 1            Phase 2                 Phase 3                     Phase 4
 Fundamentals  →    U-Net segmentation  →   Diffusion / generative  →   Adversarial robustness
 (TF + PyTorch)     (ISIC, lungs)           (Stable Diffusion →         (attack → detect → gate
-                                            MONAI)                      → benchmark → repair)
+                                            MONAI)                      → benchmark → repair
+                                                                        → localize)
 ```
 
 The thread connecting everything: the **U-Net** architecture. I first learned it
@@ -65,6 +66,7 @@ Folder: [`03-Diffusion-Models/`](03-Diffusion-Models/)
 
 Folders: [`04-Adversarial-Attacks/`](04-Adversarial-Attacks/) → [`05-Noise-Gate/`](05-Noise-Gate/)
 → [`06-Attack-Benchmark/`](06-Attack-Benchmark/) → [`07-Attack-Repair/`](07-Attack-Repair/)
+→ [`08-AutoAttack-Localize/`](08-AutoAttack-Localize/)
 
 - Learned how **FGSM/PGD adversarial attacks** fool a classifier with imperceptible
   noise, and used **Grad-CAM** to visualize how the attack shifts the model's attention.
@@ -86,6 +88,20 @@ Folders: [`04-Adversarial-Attacks/`](04-Adversarial-Attacks/) → [`05-Noise-Gat
 - **Key takeaway:** detection as a *gate* ("is this image poisoned?") and *localization*
   ("which pixels?") are different difficulties. Cheap frequency statistics are enough for the
   first and — on this evidence — not enough for the second.
+- Took that negative result's own diagnosis seriously: the confound is **contrast**, so I switched
+  from measuring the *energy* of the local spectrum to its *shape* (the ratio of second- to
+  first-difference energy, in which contrast cancels), and evaluated it against real
+  **AutoAttack** components — APGD-CE, APGD-T, FAB-T, Square — on my own Kaggle dataset.
+- Two lessons I would not have predicted. **A detector can be wrong in the useful direction:**
+  fitted on L∞ noise it scored smooth L2 attacks at AUC 0.34, which is not a miss but an
+  *inversion* — L∞ noise flattens the local spectrum while smooth noise steepens it — so the score
+  has to be two-sided. And **a learned model given hand-designed features reconstructed the
+  principle behind them**: free to weight five features, it put large opposite-sign weights on two
+  energy features, i.e. built a ratio of its own accord.
+- **Method lesson that outlasts the project:** every wrong conclusion in this phase came from a
+  measurement shortcut, not from bad code — a fixed threshold instead of a matched false-positive
+  rate, unequal perturbation energy between attacks, thresholds tuned on the test image. The
+  protocol is part of the result.
 
 ---
 
